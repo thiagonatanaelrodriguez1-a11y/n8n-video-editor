@@ -1,0 +1,213 @@
+{
+    "name": "AI Video Editor - Auto Shorts",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "video-in",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "name": "1. Webhook (Entrada)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "command": "ffmpeg -y -i /tmp/input.mp4 -vn -acodec libmp3lame /tmp/audio.mp3"
+            },
+            "name": "2. Extraer Audio",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                220,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "audio",
+                "operation": "transcribe",
+                "responseFormat": "verbose_json"
+            },
+            "name": "3. Transcribir tiempos (Whisper)",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                440,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "messages": {
+                    "messageValues": [
+                        {
+                            "message": "=Eres un director de cine viral de TikTok.\nAnaliza esta transcripción: {{ $json.text }}\n\nDevuelve un JSON estricto con esta estructura:\n{\n  \"hooks\": [\n    {\"start\": 2.5, \"end\": 4.0, \"type\": \"zoom\"},\n    {\"start\": 10.0, \"end\": 14.0, \"type\": \"broll\"}\n  ],\n  \"broll_keyword\": \"gente trabajando rapido\"\n}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "4. Estructura Hooks (GPT-4o)",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                660,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.pexels.com/videos/search",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "TU_API_KEY_PEXELS"
+                        }
+                    ]
+                },
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "query",
+                            "value": "={{ $json.message.content.broll_keyword }}"
+                        }
+                    ]
+                }
+            },
+            "name": "5. Buscar B-Roll (Pexels)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                880,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.videos[0].video_files[0].link }}",
+                "responseFormat": "file",
+                "options": {}
+            },
+            "name": "6. Descargar B-Roll",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\n\nconst meta = {\n  input_video: '/tmp/input.mp4',\n  broll_video: '/tmp/broll.mp4',\n  whisper_json: '/tmp/whisper.json',\n  output_video: '/tmp/final.mp4',\n  apply_color_correction: true,\n  hooks: JSON.parse($node[\"4. Estructura Hooks (GPT-4o)\"].json.message.content).hooks\n};\n\nfs.writeFileSync('/tmp/metadata.json', JSON.stringify(meta));\nfs.writeFileSync('/tmp/whisper.json', JSON.stringify($node[\"3. Transcribir tiempos (Whisper)\"].json));\n\nreturn { json: { success: true } };"
+            },
+            "name": "7. Preparar Metadata",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1320,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "command": "python3 /scripts/ai_editor.py --json /tmp/metadata.json"
+            },
+            "name": "8. Renderizar Video Completo",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                1540,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "1. Webhook (Entrada)": {
+            "main": [
+                [
+                    {
+                        "node": "2. Extraer Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "2. Extraer Audio": {
+            "main": [
+                [
+                    {
+                        "node": "3. Transcribir tiempos (Whisper)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "3. Transcribir tiempos (Whisper)": {
+            "main": [
+                [
+                    {
+                        "node": "4. Estructura Hooks (GPT-4o)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "4. Estructura Hooks (GPT-4o)": {
+            "main": [
+                [
+                    {
+                        "node": "5. Buscar B-Roll (Pexels)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "5. Buscar B-Roll (Pexels)": {
+            "main": [
+                [
+                    {
+                        "node": "6. Descargar B-Roll",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "6. Descargar B-Roll": {
+            "main": [
+                [
+                    {
+                        "node": "7. Preparar Metadata",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "7. Preparar Metadata": {
+            "main": [
+                [
+                    {
+                        "node": "8. Renderizar Video Completo",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
