@@ -40,7 +40,13 @@
             "position": [
                 440,
                 300
-            ]
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai_api_cred",
+                    "name": "OpenAI account"
+                }
+            }
         },
         {
             "parameters": {
@@ -60,7 +66,13 @@
             "position": [
                 660,
                 300
-            ]
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai_api_cred",
+                    "name": "OpenAI account"
+                }
+            }
         },
         {
             "parameters": {
