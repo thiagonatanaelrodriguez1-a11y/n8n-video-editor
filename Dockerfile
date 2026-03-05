@@ -27,5 +27,9 @@ RUN chmod +x ai_editor.py
 # Volvemos al directorio de n8n
 WORKDIR /home/node
 
+# IMPORTANT: Habilitar el nodo Execute Command que n8n bloquea por defecto
+ENV NODE_FUNCTION_ALLOW_EXTERNAL=*
+ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+
 # Volvemos al usuario de n8n por seguridad
 USER node
